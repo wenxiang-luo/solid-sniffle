@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>暑假学习积分与抽奖系统</title>
+<style>
+    :root { --yellow: #FFD93D; --pink: #FF8FAB; --purple: #BDB2FF; --blue: #A0E7E5; --bg: #FFF5E4; }
+    body { font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif; background: linear-gradient(135deg, #FFF1E6 0%, #E6F7FF 100%); margin: 0; padding: 20px; color: #333; -webkit-tap-highlight-color: transparent; }
+    .container { max-width: 1200px; margin: 0 auto; }
+    .header { text-align: center; margin-bottom: 20px; background: white; padding: 15px; border-radius: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+    .timeline { display: flex; justify-content: center; gap: 15px; flex-wrap: wrap; margin-top: 10px; font-size: 14px; color: #666; }
+    .timeline span { background: #f0f0f0; padding: 5px 10px; border-radius: 15px; }
+    .players { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px; }
+    @media (max-width: 768px) { .players { grid-template-columns: 1fr; } }
+    .player-card { background: white; border-radius: 25px; padding: 20px; box-shadow: 0 8px 20px rgba(0,0,0,0.08); border: 3px solid transparent; transition: all 0.3s; }
+    .player-card.sister1 { border-color: var(--yellow); }
+    .player-card.sister2 { border-color: var(--pink); }
+    .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    .name-area { display: flex; align-items: center; gap: 10px; font-size: 20px; font-weight: bold; }
+    .avatar { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; }
+    .sister1 .avatar { background: var(--yellow); }
+    .sister2 .avatar { background: var(--pink); }
+    .score-area { font-size: 32px; font-weight: bold; color: #FF6B6B; }
+    .task-list { display: flex; flex-direction: column; gap: 10px; }
+    .task-item { display: flex; justify-content: space-between; align-items: center; background: #F9F9F9; padding: 12px 15px; border-radius: 15px; }
+    .task-item.done { opacity: 0.5; text-decoration: line-through; }
+    .task-name { font-size: 16px; }
+    .btn { border: none; padding: 8px 16px; border-radius: 12px; font-weight: bold; cursor: pointer; transition: transform 0.1s; font-size: 14px; }
+    .btn:active { transform: scale(0.95); }
+    .btn-done { background: #4ECDC4; color: white; }
+    .btn-extra { background: #FFE66D; color: #555; margin-top: 10px; width: 100%; padding: 10px; font-size: 16px; }
+    .float-score { position: fixed; font-size: 24px; font-weight: bold; color: #FF6B6B; pointer-events: none; animation: floatUp 1s ease-out forwards; z-index: 1000; }
+    @keyframes floatUp { 0% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; transform: translateY(-50px); } }
+    .lottery-section { background: white; border-radius: 25px; padding: 20px; text-align: center; box-shadow: 0 8px 20px rgba(0,0,0,0.08); position: relative; }
+    .wheel-container { position: relative; width: 300px; height: 300px; margin: 20px auto; }
+    canvas { width: 100%; height: 100%; border-radius: 50%; box-shadow: 0 0 15px rgba(0,0,0,0.1); }
+    .pointer { position: absolute; top: -10px; left: 50%; transform: translateX(-50%); width: 0; height: 0; border-left: 15px solid transparent; border-right: 15px solid transparent; border-top: 30px solid #FF6B6B; z-index: 10; }
+    .btn-lottery { background: #FF6B6B; color: white; padding: 15px 40px; font-size: 20px; border-radius: 30px; box-shadow: 0 4px 10px rgba(255,107,107,0.3); }
+    .btn-lottery:disabled { background: #ccc; box-shadow: none; cursor: not-allowed; }
+    .btn-manage { position: absolute; top: 20px; right: 20px; background: #eee; color: #555; }
+    .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 100; justify-content: center; align-items: center; }
+    .modal-content { background: white; padding: 30px; border-radius: 20px; width: 90%; max-width: 400px; text-align: center; }
+    .prize-list { margin: 20px 0; text-align: left; }
+    .prize-item { display: flex; justify-content: space-between; padding: 8px; border-bottom: 1px solid #eee; }
+    .input-row { display: flex; gap: 10px; margin-bottom: 20px; }
+    input { flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 10px; }
+    .confetti { position: fixed; width: 10px; height: 10px; pointer-events: none; z-index: 999; }
+    .extra-btn { width: 100%; background: #FFE66D; color: #555; padding: 10px; font-size: 16px; border-radius: 12px; font-weight: bold; border: none; cursor: pointer; margin-top: 5px; transition: transform 0.1s; }
+    .extra-btn:active { transform: scale(0.95); }
+</style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h2>🌟 暑假学习大闯关 🌟</h2>
+        <div class="timeline">
+            <span>9:00 📚学习20m</span> ➔ <span>9:20 🏃锻炼15m</span> ➔ <span>9:35 📚学习25m</span> ➔ <span>10:00 🏃锻炼15m</span>
+        </div>
+    </div>
+
+    <div class="players">
+        <!-- 姐姐区域 -->
+        <div class="player-card sister1">
+            <div class="card-header">
+                <div class="name-area"><div class="avatar">⭐</div> 郑贤曦</div>
+                <div class="score-area" id="score1">0</div>
+            </div>
+            <div class="task-list" id="tasks1"></div>
+            <button class="btn btn-extra" onclick="showExtraOptions(1)">✨ 奖励额外积分</button>
+        </div>
+
+        <!-- 妹妹区域 -->
+        <div class="player-card sister2">
+            <div class="card-header">
+                <div class="name-area"><div class="avatar">💗</div> 郑贤艺</div>
+                <div class="score-area" id="score2">0</div>
+            </div>
+            <div class="task-list" id="tasks2"></div>
+            <button class="btn btn-extra" onclick="showExtraOptions(2)">✨ 奖励额外积分</button>
+        </div>
+    </div>
+
+    <!-- 抽奖区 -->
+    <div class="lottery-section">
+        <button class="btn btn-manage" onclick="openModal()">🎁 礼物管理</button>
+        <h3>🎰 幸运大转盘 🎰</h3>
+        <p style="color:#666">积分满 <b id="thresholdText">30</b> 分可抽奖一次</p>
+        <div class="wheel-container">
+            <div class="pointer"></div>
+            <canvas id="wheel" width="300" height="300"></canvas>
+        </div>
+        <button class="btn btn-lottery" id="lotteryBtn" onclick="startLottery()" disabled>差30分可抽奖</button>
+    </div>
+</div>
+
+<!-- 额外积分选择弹窗 -->
+<div class="modal" id="extraModal">
+    <div class="modal-content">
+        <h3>请选择奖励积分</h3>
+        <div style="display: flex; gap: 10px; margin-top: 20px;">
+            <button class="extra-btn" onclick="addExtra(1)">+1 分</button>
+            <button class="extra-btn" onclick="addExtra(2)">+2 分</button>
+            <button class="extra-btn" onclick="addExtra(3)">+3 分</button>
+        </div>
+        <button class="btn" style="background:#eee; width:100%; margin-top:15px;" onclick="closeExtraModal()">取消</button>
+    </div>
+</div>
+
+<!-- 礼物管理弹窗 -->
+<div class="modal" id="prizeModal">
+    <div class="modal-content">
+        <h3>🎁 礼物管理</h3>
+        <div class="input-row">
+            <input type="text" id="newPrizeInput" placeholder="输入新奖品名称">
+            <button class="btn btn-done" onclick="addPrize()">添加</button>
+        </div>
+        <div class="prize-list" id="prizeListDisplay"></div>
+        <button class="btn" style="background:#eee; width:100%" onclick="closeModal()">关闭</button>
+    </div>
+</div>
+
+<script>
+    // 配置区
+    const TASKS = ["暑假作业", "听背英语", "语文阅读", "数学计算", "汉字宫练字"];
+    const POINTS_PER_TASK = 2;
+    const LOTTERY_COST = 30; // 修改为30分抽奖一次
+    let prizes = JSON.parse(localStorage.getItem('prizes')) || ["飞碟枪", "数学知识卡", "科学知识卡", "生活安全卡", "变脸魔方", "对对碰桌游", "再接再厉"];
+    let scores = [parseInt(localStorage.getItem('score1'))||0, parseInt(localStorage.getItem('score2'))||0];
+    let doneTasks = JSON.parse(localStorage.getItem('doneTasks')) || [[], []];
+    let currentPlayerForExtra = 1;
+    
+    // 初始化
+    function init() {
+        document.getElementById('score1').innerText = scores[0];
+        document.getElementById('score2').innerText = scores[1];
+        document.getElementById('thresholdText').innerText = LOTTERY_COST;
+        renderTasks(1);
+        renderTasks(2);
+        drawWheel();
+        updateLotteryBtn();
+    }
+
+    function renderTasks(player) {
+        const container = document.getElementById(`tasks${player}`);
+        container.innerHTML = '';
+        TASKS.forEach((task, index) => {
+            const isDone = doneTasks[player-1].includes(index);
+            const div = document.createElement('div');
+            div.className = `task-item ${isDone ? 'done' : ''}`;
+            div.innerHTML = `<span class="task-name">${task}</span>`;
+            if (!isDone) {
+                const btn = document.createElement('button');
+                btn.className = 'btn btn-done';
+                btn.innerText = '完成 +';
+                btn.onclick = () => completeTask(player, index);
+                div.appendChild(btn);
+            } else {
+                div.innerHTML += `<span>✅</span>`;
+            }
+            container.appendChild(div);
+        });
+    }
+
+    function completeTask(player, taskIndex) {
+        doneTasks[player-1].push(taskIndex);
+        localStorage.setItem('doneTasks', JSON.stringify(doneTasks));
+        addScore(player, POINTS_PER_TASK);
+        renderTasks(player);
+        playSound('coin');
+    }
+
+    function showExtraOptions(player) {
+        currentPlayerForExtra = player;
+        document.getElementById('extraModal').style.display = 'flex';
+    }
+
+    function closeExtraModal() {
+        document.getElementById('extraModal').style.display = 'none';
+    }
+
+    function addExtra(points) {
+        addScore(currentPlayerForExtra, points);
+        playSound('coin');
+        closeExtraModal();
+    }
+
+    function addScore(player, points) {
+        scores[player-1] += points;
+        localStorage.setItem(`score${player}`, scores[player-1]);
+        document.getElementById(`score${player}`).innerText = scores[player-1];
+        
+        // 飘字特效
+        const rect = document.getElementById(`score${player}`).getBoundingClientRect();
+        const float = document.createElement('div');
+        float.className = 'float-score';
+        float.innerText = `+${points}`;
+        float.style.left = `${rect.left + rect.width/2}px`;
+        float.style.top = `${rect.top}px`;
+        document.body.appendChild(float);
+        setTimeout(() => float.remove(), 1000);
+
+        updateLotteryBtn();
+    }
+
+    function updateLotteryBtn() {
+        const minScore = Math.min(scores[0], scores[1]);
+        const btn = document.getElementById('lotteryBtn');
+        if (minScore >= LOTTERY_COST) {
+            btn.disabled = false;
+            btn.innerText = "开始抽奖 🎰";
+        } else {
+            btn.disabled = true;
+            btn.innerText = `差${LOTTERY_COST - minScore}分可抽奖`;
+        }
+    }
+
+    // 音效生成
+    let audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    function playSound(type) {
+        if (type === 'coin') {
+            let osc = audioCtx.createOscillator();
+            let gain = audioCtx.createGain();
+            osc.connect(gain); gain.connect(audioCtx.destination);
+            osc.frequency.setValueAtTime(800, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(400, audioCtx.currentTime + 0.1);
+            gain.gain.setValueAtTime(0.5, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+            osc.start(); osc.stop(audioCtx.currentTime + 0.1);
+        }
+    }
+
+    // 大转盘逻辑
+    const canvas = document.getElementById('wheel');
+    const ctx = canvas.getContext('2d');
+    let currentAngle = 0;
+    let isSpinning = false;
+
+    function drawWheel() {
+        const num = prizes.length;
+        const anglePer = (2 * Math.PI) / num;
+        const colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8', '#F7DC6F', '#BB8FCE', '#FF8FAB'];
+        
+        ctx.clearRect(0, 0, 300, 300);
+        ctx.save();
+        ctx.translate(150, 150);
+        ctx.rotate(currentAngle);
+        
+        for (let i = 0; i < num; i++) {
+            ctx.beginPath();
+            ctx.moveTo(0, 0);
+            ctx.arc(0, 0, 140, i * anglePer, (i + 1) * anglePer);
+            ctx.fillStyle = colors[i % colors.length];
+            ctx.fill();
+            ctx.stroke();
+            
+            ctx.save();
+            ctx.rotate(i * anglePer + anglePer / 2);
+            ctx.textAlign = "right";
+            ctx.fillStyle = "white";
+            ctx.font = "bold 14px sans-serif";
+            ctx.fillText(prizes[i], 130, 5);
+            ctx.restore();
+        }
+        ctx.restore();
+    }
+
+    function startLottery() {
+        if (isSpinning) return;
+        // 扣分逻辑(选当前积分较高的一方扣)
+        let playerToDeduct = scores[0] >= LOTTERY_COST ? 0 : 1;
+        scores[playerToDeduct] -= LOTTERY_COST;
+        localStorage.setItem(`score${playerToDeduct+1}`, scores[playerToDeduct]);
+        document.getElementById(`score${playerToDeduct+1}`).innerText = scores[playerToDeduct];
+        updateLotteryBtn();
+
+        isSpinning = true;
+        const spinTime = 3000;
+        const startAngle = currentAngle;
+        const targetAngle = startAngle + Math.PI * 2 * 5 + Math.random() * Math.PI * 2;
+        
+        const startTime = performance.now();
+        function animate(now) {
+            const elapsed = now - startTime;
+            const progress = Math.min(elapsed / spinTime, 1);
+            currentAngle = startAngle + (targetAngle - startAngle) * (1 - Math.pow(1 - progress, 3));
+            drawWheel();
+            if (progress < 1) {
+                requestAnimationFrame(animate);
+            } else {
+                isSpinning = false;
+                showResult();
+            }
+        }
+        requestAnimationFrame(animate);
+    }
+
+    function showResult() {
+        const num = prizes.length;
+        const anglePer = (2 * Math.PI) / num;
+        let finalAngle = currentAngle % (2 * Math.PI);
+        if (finalAngle < 0) finalAngle += 2 * Math.PI;
+        let winIndex = Math.floor((2 * Math.PI - finalAngle + Math.PI/2) / anglePer) % num;
+        
+        alert(`🎉 恭喜抽中：${prizes[winIndex]} 🎉`);
+        createConfetti();
+    }
+
+    function createConfetti() {
+        for(let i=0; i<50; i++) {
+            const div = document.createElement('div');
+            div.className = 'confetti';
+            div.style.left = Math.random() * 100 + 'vw';
+            div.style.top = '-10px';
+            div.style.background = `hsl(${Math.random()*360}, 100%, 50%)`;
+            div.style.transform = `rotate(${Math.random()*360}deg)`;
+            document.body.appendChild(div);
+            
+            const duration = 2000 + Math.random() * 1000;
+            div.animate([
+                { transform: `translateY(0) rotate(0deg)`, opacity: 1 },
+                { transform: `translateY(100vh) rotate(${Math.random()*720}deg)`, opacity: 0 }
+            ], { duration, easing: 'cubic-bezier(0.1, 0.1, 0.5, 1)' });
+            
+            setTimeout(() => div.remove(), duration);
+        }
+    }
+
+    // 礼物管理
+    function renderPrizes() {
+        const list = document.getElementById('prizeListDisplay');
+        list.innerHTML = '';
+        prizes.forEach((p, i) => {
+            const div = document.createElement('div');
+            div.className = 'prize-item';
+            div.innerHTML = `<span>${p}</span><button class="btn" style="background:#ffcccc" onclick="deletePrize(${i})">删除</button>`;
+            list.appendChild(div);
+        });
+    }
+    function addPrize() {
+        const input = document.getElementById('newPrizeInput');
+        if (input.value) {
+            prizes.push(input.value);
+            localStorage.setItem('prizes', JSON.stringify(prizes));
+            input.value = '';
+            renderPrizes();
+            drawWheel();
+        }
+    }
+    function deletePrize(index) {
+        if (prizes.length <= 2) return alert("至少保留2个奖品哦");
+        prizes.splice(index, 1);
+        localStorage.setItem('prizes', JSON.stringify(prizes));
+        renderPrizes();
+        drawWheel();
+    }
+    function openModal() { document.getElementById('prizeModal').style.display = 'flex'; renderPrizes(); }
+    function closeModal() { document.getElementById('prizeModal').style.display = 'none'; }
+
+    init();
+</script>
+</body>
+</html>
